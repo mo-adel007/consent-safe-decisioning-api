@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decisioning API – Technical Architecture Document</title>
+  <style>
+    /* ─── Print-optimized styles ─── */
+    @media print {
+      body { font-size: 11pt; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none; }
+      header { background: #1a1a2e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .diagram-box { break-inside: avoid; }
+      .table-wrapper { break-inside: avoid; }
+    }
+
+    /* ─── Base ─── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.7;
+      color: #2d2d2d;
+      background: #f8f9fa;
+    }
+
+    /* ─── Header ─── */
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: white;
+      padding: 50px 60px;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    header .subtitle {
+      font-size: 16px;
+      opacity: 0.85;
+      font-weight: 300;
+    }
+    header .meta {
+      margin-top: 20px;
+      font-size: 13px;
+      opacity: 0.65;
+      display: flex;
+      gap: 30px;
+    }
+
+    /* ─── Content ─── */
+    .content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 40px 80px;
+    }
+
+    h2 {
+      font-size: 24px;
+      color: #1a1a2e;
+      margin: 50px 0 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #0f3460;
+      font-weight: 700;
+    }
+
+    h3 {
+      font-size: 18px;
+      color: #16213e;
+      margin: 35px 0 12px;
+      font-weight: 600;
+    }
+
+    h4 {
+      font-size: 15px;
+      color: #0f3460;
+      margin: 25px 0 10px;
+      font-weight: 600;
+    }
+
+    p {
+      margin-bottom: 14px;
+      text-align: justify;
+    }
+
+    /* ─── Tables ─── */
+    .table-wrapper {
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    thead th {
+      background: #1a1a2e;
+      color: white;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    tbody td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) { background: #f4f6f9; }
+    tbody tr:hover { background: #eef1f7; }
+
+    /* ─── Diagram boxes ─── */
+    .diagram-box {
+      background: #fafbfc;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 30px;
+      margin: 20px 0;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
+      color: #1a1a2e;
+    }
+
+    /* ─── Callout boxes ─── */
+    .callout {
+      border-left: 4px solid;
+      padding: 16px 20px;
+      margin: 20px 0;
+      border-radius: 0 6px 6px 0;
+      font-size: 14px;
+    }
+    .callout-blue {
+      border-color: #0f3460;
+      background: #eef3fb;
+    }
+    .callout-orange {
+      border-color: #e67e22;
+      background: #fef5ec;
+    }
+    .callout-green {
+      border-color: #27ae60;
+      background: #edfbf3;
+    }
+    .callout-red {
+      border-color: #e74c3c;
+      background: #fdedec;
+    }
+    .callout strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    /* ─── Lists ─── */
+    ul, ol {
+      margin: 10px 0 18px 24px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* ─── Flow arrows ─── */
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0;
+      font-size: 15px;
+    }
+    .flow-step .step-num {
+      background: #0f3460;
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .flow-arrow {
+      text-align: center;
+      color: #0f3460;
+      font-size: 20px;
+      margin: 4px 0;
+      padding-left: 42px;
+    }
+
+    /* ─── Inline highlights ─── */
+    .field-name {
+      background: #e8f0fe;
+      color: #0f3460;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .tag-safe { background: #d4edda; color: #155724; }
+    .tag-blocked { background: #f8d7da; color: #721c24; }
+    .tag-allowed { background: #d1ecf1; color: #0c5460; }
+
+    /* ─── Section numbers ─── */
+    .section-num {
+      color: #0f3460;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+
+    /* ─── Footer ─── */
+    .footer {
+      text-align: center;
+      padding: 30px;
+      color: #999;
+      font-size: 12px;
+      border-top: 1px solid #e8e8e8;
+      margin-top: 60px;
+    }
+
+    /* ─── Print button ─── */
+    .print-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #0f3460;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    .print-btn:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- HEADER                                                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<header>
+  <h1>Decisioning API</h1>
+  <div class="subtitle">Technical Architecture &amp; Planning Document — Consent-Safe Personalisation</div>
+  <div class="meta">
+    <span>Date: 4 March 2026</span>
+    <span>Version: 1.0</span>
+    <span>Status: Pre-Implementation Review</span>
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 1. EXECUTIVE SUMMARY                                           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2><span class="section-num">1.</span> Executive Summary</h2>
+
+<p>
+  This document describes the architecture for a <strong>Decisioning API</strong> — a lightweight backend service that answers one question for every visitor:
+</p>
+
+<div class="callout callout-blue">
+  <strong>"This visitor just opened this page. Which version of the content should they see?"</strong>
+  The API evaluates rules and returns the correct variant, without the frontend needing to know the rules themselves.
+</div>
+
+<p>
+  Instead of rebuilding or redeploying a website for different audiences, the website asks the Decision API at runtime. This is the same architectural pattern used by experimentation platforms, marketing personalisation engines, feature flag systems, and growth experiment frameworks at scale.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 2. THE BIG PICTURE                                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2><span class="section-num">2.</span> The Big Picture — How Personalisation Works</h2>
+
+<h3>2.1 The Runtime Flow</h3>
+
+<p>When a user opens a website, the following happens in real time:</p>
+
+<div class="flow-step"><span class="step-num">1</span> User opens the website</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">2</span> Frontend sends visitor context to the Decision API</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">3</span> API receives the request at <strong>POST /decide</strong></div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">4</span> API evaluates rules against visitor context</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">5</span> API returns which variant to show (headline, flags, etc.)</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">6</span> Frontend renders that variant to the user</div>
+
+<h3>2.2 Who Uses This Pattern</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Industry Use Case</th><th>What It Does</th><th>Example</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A/B Testing</td><td>Show different versions to measure which performs better</td><td>Optimizely, Google Optimize</td></tr>
+    <tr><td>Marketing Personalisation</td><td>Tailor content to user segments</td><td>Dynamic Yield, Segment</td></tr>
+    <tr><td>Feature Flags</td><td>Toggle features on/off per user or region</td><td>LaunchDarkly, Split</td></tr>
+    <tr><td>Growth Experiments</td><td>Run experiments on pricing, onboarding, etc.</td><td>Statsig, Amplitude Experiment</td></tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 3. KEY CONCEPTS                                                -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2><span class="section-num">3.</span> Key Concepts</h2>
+
+<h3>3.1 What Is a Variant?</h3>
+
+<p>
+  A <strong>variant</strong> is simply a version of content. The same page can have multiple variants, each designed for a different audience.
+</p>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Variant ID</th><th>Headline</th><th>Target Audience</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="field-name">mobile-sale</span></td><td>"Mobile users get 20% off"</td><td>Mobile visitors from Egypt</td></tr>
+    <tr><td><span class="field-name">seo-variant</span></td><td>"Welcome Google visitors"</td><td>Traffic from Google search</td></tr>
+    <tr><td><span class="field-name">arabic-offer</span></td><td>"مرحباً! اكتشف عروضنا"</td><td>Arabic-speaking visitors</td></tr>
+    <tr><td><span class="field-name">default</span></td><td>"Welcome! Discover our offerings"</td><td>Everyone else (fallback)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Each variant carries a <strong>headline</strong> (the text to display) and <strong>flags</strong> (boolean switches that control UI behaviour like showing banners or enabling chat). The frontend uses these to render the appropriate experience.
+</p>
+
+<h3>3.2 What Is the Headline?</h3>
+
+<p>
+  The headline is the content payload associated with a variant. When the API says "show variant <span class="field-name">mobile-sale</span>", the frontend receives:
+</p>
+
+<ul>
+  <li><strong>headline:</strong> "Mobile users get 20% off" — the text to display prominently</li>
+  <li><strong>flags:</strong> <span class="field-name">showDiscountBanner: true</span> — tells the frontend to show a discount banner</li>
+</ul>
+
+<p>The frontend uses these values to change the headline, show/hide banners, and enable/disable features — all without redeploying.</p>
+
+<h3>3.3 What Is the Rule Engine?</h3>
+
+<p>
+  The rule engine is the <strong>condition matcher</strong> at the core of the API. It loops through a list of rules, checks if the visitor's context matches each rule's conditions, and returns the first matching variant.
+</p>
+
+<div class="callout callout-green">
+  <strong>How it works:</strong>
+  For each rule → check if ALL conditions match → if yes, return that variant → if no rule matches, return the fallback.
+</div>
+
+<p>Rules support <strong>AND logic</strong> — a rule can have multiple conditions, and all of them must be true for the rule to match. This allows for precise targeting like "visitors from Egypt AND on mobile devices".</p>
+
+<h4>Supported Operators</h4>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Operator</th><th>Meaning</th><th>Example</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="field-name">eq</span></td><td>Exact equality</td><td>country eq "EG" → true if country is exactly "EG"</td></tr>
+    <tr><td><span class="field-name">in</span></td><td>Value is in a list</td><td>country in ["EG", "SA", "AE"] → true if country is any of these</td></tr>
+    <tr><td><span class="field-name">contains</span></td><td>String contains substring</td><td>referrerDomain contains "google" → true for "google.com", "google.co.uk"</td></tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 4. SYSTEM ARCHITECTURE                                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 class="page-break"><span class="section-num">4.</span> System Architecture</h2>
+
+<h3>4.1 High-Level System Flow</h3>
+
+<p>The system has two main flows: fetching the ruleset configuration, and making a decision for a visitor.</p>
+
+<div class="diagram-box">
+                                ┌──────────────────────────────┐
+                                │       DECISION SERVICE       │
+                                │                              │
+                                │  ┌────────────────────────┐  │
+   GET /config/:siteId ────────▶│  │    Config Store        │  │
+          │                     │  │  (in-memory rulesets)   │  │
+          │                     │  └──────────┬─────────────┘  │
+          ▼                     │             │                │
+   Returns rules + variants     │             │ load rules     │
+   + configVersion              │             │                │
+   + ETag + Cache-Control       │             ▼                │
+                                │  ┌────────────────────────┐  │
+   POST /decide ───────────────▶│  │   Consent Filter       │  │
+          │                     │  │   (strip unsafe data)   │  │
+          │                     │  └──────────┬─────────────┘  │
+          │                     │             │                │
+          │                     │             ▼                │
+          │                     │  ┌────────────────────────┐  │
+          │                     │  │    Rule Engine          │  │
+          │                     │  │   (evaluate top-down)   │  │
+          │                     │  └──────────┬─────────────┘  │
+          │                     │             │                │
+          ▼                     │             ▼                │
+   Returns variantId,           │     First match wins        │
+   headline, flags,             │     or fallback             │
+   configVersion                │                              │
+                                └──────────────────────────────┘
+</div>
+
+<h3>4.2 Request Sequence — Step by Step</h3>
+
+<p>The following sequence shows exactly how each request flows through the system, from client to origin and back:</p>
+
+<h4>Flow 1: Fetching the Ruleset (GET /config/:siteId)</h4>
+
+<div class="diagram-box">
+   Client              CDN / Edge            NestJS API           Config Store
+     │                     │                     │                     │
+     │  GET /config/       │                     │                     │
+     │  site-nike          │                     │                     │
+     ├────────────────────▶│                     │                     │
+     │                     │                     │                     │
+     │                     │  (cache miss)       │                     │
+     │                     ├────────────────────▶│                     │
+     │                     │                     │                     │
+     │                     │                     │  load rules for     │
+     │                     │                     │  "site-nike"        │
+     │                     │                     ├────────────────────▶│
+     │                     │                     │                     │
+     │                     │                     │  ruleset + version  │
+     │                     │                     │◀────────────────────┤
+     │                     │                     │                     │
+     │                     │  200 OK             │                     │
+     │                     │  + JSON body        │                     │
+     │                     │  + ETag: "v3"       │                     │
+     │                     │  + Cache-Control    │                     │
+     │                     │◀────────────────────┤                     │
+     │                     │                     │                     │
+     │  Cached response    │                     │                     │
+     │◀────────────────────┤                     │                     │
+     │                     │                     │                     │
+</div>
+
+<h4>Flow 2: Making a Decision (POST /decide)</h4>
+
+<div class="diagram-box">
+   Client                            NestJS API              Config Store
+     │                                   │                        │
+     │  POST /decide                     │                        │
+     │  { siteId, url,                   │                        │
+     │    visitor, consent }             │                        │
+     ├──────────────────────────────────▶│                        │
+     │                                   │                        │
+     │                                   │   load rules for       │
+     │                                   │   siteId               │
+     │                                   ├───────────────────────▶│
+     │                                   │                        │
+     │                                   │   ruleset + fallback   │
+     │                                   │◀───────────────────────┤
+     │                                   │                        │
+     │                                   │                        │
+     │                          ┌────────┴────────┐               │
+     │                          │ Consent Filter   │               │
+     │                          │ (strip unsafe    │               │
+     │                          │  fields if       │               │
+     │                          │  marketing=false)│               │
+     │                          └────────┬────────┘               │
+     │                                   │                        │
+     │                          ┌────────┴────────┐               │
+     │                          │ Rule Engine      │               │
+     │                          │ (evaluate rules  │               │
+     │                          │  top-to-bottom)  │               │
+     │                          └────────┬────────┘               │
+     │                                   │                        │
+     │  200 OK                           │                        │
+     │  { variantId, headline,           │                        │
+     │    flags, configVersion }         │                        │
+     │◀──────────────────────────────────┤                        │
+     │                                   │                        │
+</div>
+
+<div class="callout callout-blue">
+  <strong>Key difference between the two flows:</strong>
+  <span class="field-name">GET /config</span> passes through the CDN and is cacheable — it rarely hits the origin server after the first request. <span class="field-name">POST /decide</span> goes directly to the API because every visitor's context is unique and decisions cannot be cached.
+</div>
+
+<h3>4.3 The Two API Endpoints</h3>
+
+<h4>Endpoint 1: GET /config/:siteId — "Give me the rules"</h4>
+
+<p>
+  This endpoint returns the complete configuration for a given site: all the rules, all the variants, and the fallback. It is the <strong>rules database</strong> in API form.
+</p>
+
+<p>Why does this endpoint exist separately?</p>
+<ul>
+  <li><strong>Transparency</strong> — frontends, dashboards, or debugging tools can inspect the active ruleset</li>
+  <li><strong>Cacheability</strong> — because config changes infrequently, we cache it aggressively at CDN and browser level</li>
+  <li><strong>Separation of concerns</strong> — config retrieval is read-only; decision-making is a computation</li>
+</ul>
+
+<h4>Endpoint 2: POST /decide — "Decide for this visitor"</h4>
+
+<p>
+  This is the core endpoint. The frontend sends everything it knows about the visitor (country, device, referrer, consent status, etc.) and the API responds with which variant they should see.
+</p>
+
+<p>The /decide endpoint performs three steps internally:</p>
+<ol>
+  <li><strong>Load</strong> — fetch the ruleset for the given siteId from the config store</li>
+  <li><strong>Filter</strong> — apply the consent boundary (strip unsafe fields if marketing=false)</li>
+  <li><strong>Evaluate</strong> — run the rule engine top-to-bottom, return first match or fallback</li>
+</ol>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 5. RULES CONFIGURATION                                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2><span class="section-num">5.</span> Rules Configuration — Why Config Instead of Hardcoding</h2>
+
+<p>
+  Marketing teams change targeting rules frequently. Today it might be "mobile users in Egypt get a discount", tomorrow it could be "visitors from Germany see a special campaign". Instead of redeploying the backend for every change, we separate the rules into a configuration layer.
+</p>
+
+<div class="callout callout-orange">
+  <strong>The key insight:</strong>
+  Config is data, not code. By treating rules as data that the engine reads, we can update targeting without any code deployment. This is how every production personalisation system works.
+</div>
+
+<h3>5.1 Example Ruleset for "site-nike"</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Priority</th><th>Rule ID</th><th>Conditions (AND)</th><th>Variant</th><th>Headline</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1</strong> (highest)</td>
+      <td><span class="field-name">rule-eg-mobile</span></td>
+      <td>country = "EG" <strong>AND</strong> deviceType = "mobile"</td>
+      <td><span class="field-name">mobile-sale</span></td>
+      <td>"Mobile users get 20% off"</td>
+    </tr>
+    <tr>
+      <td><strong>2</strong></td>
+      <td><span class="field-name">rule-google-seo</span></td>
+      <td>referrerDomain = "google.com"</td>
+      <td><span class="field-name">seo-variant</span></td>
+      <td>"Welcome Google visitors"</td>
+    </tr>
+    <tr>
+      <td><strong>3</strong></td>
+      <td><span class="field-name">rule-arabic</span></td>
+      <td>language = "ar"</td>
+      <td><span class="field-name">arabic-offer</span></td>
+      <td>"مرحباً! اكتشف عروضنا"</td>
+    </tr>
+    <tr>
+      <td><strong>Fallback</strong></td>
+      <td>—</td>
+      <td>No conditions (always matches)</td>
+      <td><span class="field-name">default</span></td>
+      <td>"Welcome! Discover our offerings"</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>Evaluation order matters.</strong> Rules are checked top-to-bottom. The first rule whose conditions ALL match wins. If no rule matches, the fallback is returned. This "first-match-wins" strategy is simple, predictable, and easy to reason about.</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 6. CONSENT BOUNDARY                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 class="page-break"><span class="section-num">6.</span> Consent Boundary — Privacy by Design</h2>
+
+<h3>6.1 Why Consent Matters</h3>
+
+<p>
+  Privacy regulations like GDPR require that users consent to marketing tracking. When a user sees a cookie consent popup and says <strong>"No"</strong> to marketing cookies, we are legally obligated to not use any data that could personally identify them.
+</p>
+
+<h3>6.2 The Consent Boundary Rule</h3>
+
+<div class="callout callout-red">
+  <strong>When marketing = false:</strong>
+  The system must NOT use any personal identifiers (visitorId, userId, email, traits, tracking IDs) to make decisions. Only anonymous, non-identifying signals may be used.
+</div>
+
+<h3>6.3 What Is Allowed vs. Blocked</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Field</th><th>When marketing = true</th><th>When marketing = false</th><th>Why</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="field-name">country</span></td>
+      <td><span class="tag tag-allowed">✓ Allowed</span></td>
+      <td><span class="tag tag-safe">✓ Allowed</span></td>
+      <td>Geographic region, does not identify a person</td>
+    </tr>
+    <tr>
+      <td><span class="field-name">language</span></td>
+      <td><span class="tag tag-allowed">✓ Allowed</span></td>
+      <td><span class="tag tag-safe">✓ Allowed</span></td>
+      <td>Browser preference, does not identify a person</td>
+    </tr>
+    <tr>
+      <td><span class="field-name">deviceType</span></td>
+      <td><span class="tag tag-allowed">✓ Allowed</span></td>
+      <td><span class="tag tag-safe">✓ Allowed</span></td>
+      <td>Device category (desktop/mobile/tablet), not identifying</td>
+    </tr>
+    <tr>
+      <td><span class="field-name">referrerDomain</span></td>
+      <td><span class="tag tag-allowed">✓ Allowed</span></td>
+      <td><span class="tag tag-safe">✓ Allowed</span></td>
+      <td>Traffic source domain, not personal</td>
+    </tr>
+    <tr>
+      <td><span class="field-name">visitorId</span></td>
+      <td><span class="tag tag-allowed">✓ Allowed</span></td>
+      <td><span class="tag tag-blocked">✗ BLOCKED</span></td>
+      <td>Personally identifies a specific visitor</td>
+    </tr>
+    <tr>
+      <td><span class="field-name">traits</span> (plan, loginCount, etc.)</td>
+      <td><span class="tag tag-allowed">✓ Allowed</span></td>
+      <td><span class="tag tag-blocked">✗ BLOCKED</span></td>
+      <td>Behavioural data tied to an individual</td>
+    </tr>
+    <tr>
+      <td><span class="field-name">userId / email</span></td>
+      <td><span class="tag tag-allowed">✓ Allowed</span></td>
+      <td><span class="tag tag-blocked">✗ BLOCKED</span></td>
+      <td>Direct personal identifier</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>6.4 How the Filter Works</h3>
+
+<div class="diagram-box">
+   ┌──────────────────────────────────────────────────────────────────┐
+   │                    INCOMING VISITOR CONTEXT                      │
+   │                                                                  │
+   │  visitorId: "vis-abc-123"                                        │
+   │  country: "EG"                                                   │
+   │  language: "ar"                                                  │
+   │  deviceType: "mobile"                                            │
+   │  referrerDomain: "google.com"                                    │
+   │  traits: { plan: "premium", loginCount: 42 }                     │
+   └──────────────────────────────┬───────────────────────────────────┘
+                                  │
+                        ┌─────────▼─────────┐
+                        │  marketing = ?     │
+                        └─────────┬─────────┘
+                    ┌─────────────┴─────────────┐
+                    │                           │
+               marketing = TRUE            marketing = FALSE
+                    │                           │
+                    ▼                           ▼
+   ┌──────────────────────────┐   ┌──────────────────────────┐
+   │   FULL CONTEXT PASSED    │   │   CONSENT-SAFE ONLY      │
+   │                          │   │                          │
+   │   visitorId ✓            │   │   country: "EG"     ✓    │
+   │   country ✓              │   │   language: "ar"    ✓    │
+   │   language ✓             │   │   deviceType: "mobile" ✓ │
+   │   deviceType ✓           │   │   referrerDomain:        │
+   │   referrerDomain ✓       │   │     "google.com"    ✓    │
+   │   traits ✓               │   │                          │
+   │                          │   │   visitorId  ✗ DROPPED   │
+   │   → Rule engine sees     │   │   traits     ✗ DROPPED   │
+   │     everything           │   │                          │
+   └──────────────────────────┘   │   → Rule engine only     │
+                                  │     sees safe fields     │
+                                  └──────────────────────────┘
+</div>
+
+<h3>6.5 Practical Consequence</h3>
+
+<p>
+  If two visitors have <strong>different</strong> visitorIds and traits, but the <strong>same</strong> country, language, deviceType, and referrerDomain — and marketing is false — they will <strong>always</strong> receive the exact same variant. This is the proof that personal data is not influencing the decision.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 7. CACHING STRATEGY                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2><span class="section-num">7.</span> Caching Strategy — ETag &amp; Cache-Control</h2>
+
+<h3>7.1 Why Cache the Config?</h3>
+
+<p>
+  The <span class="field-name">/config/:siteId</span> endpoint returns rules that change infrequently (maybe a few times a day). Without caching, every page load triggers a request to the origin server. With caching, we dramatically reduce server load and improve response times.
+</p>
+
+<h3>7.2 The Caching Layers</h3>
+
+<div class="diagram-box">
+       Request Flow (left to right):
+
+   ┌──────────┐      ┌──────────┐      ┌──────────┐      ┌──────────┐
+   │ BROWSER  │ ───▶ │   CDN    │ ───▶ │   EDGE   │ ───▶ │  ORIGIN  │
+   │          │      │          │      │          │      │  SERVER  │
+   │ Caches   │      │ Caches   │      │ Caches   │      │          │
+   │ for 60s  │      │ for 300s │      │ for 300s │      │ (truth)  │
+   └──────────┘      └──────────┘      └──────────┘      └──────────┘
+       max-age=60        s-maxage=300       s-maxage=300
+
+   * Browser only asks CDN after 60 seconds
+   * CDN only asks Origin after 300 seconds (5 minutes)
+   * ETag enables 304 Not Modified (no body sent if unchanged)
+</div>
+
+<h3>7.3 Cache Headers Explained</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Header</th><th>Value</th><th>What It Does</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="field-name">Cache-Control</span></td>
+      <td>public, max-age=60, s-maxage=300</td>
+      <td>
+        <strong>public</strong> — Any cache (browser, CDN, proxy) may store this response<br>
+        <strong>max-age=60</strong> — Browser considers response fresh for 60 seconds<br>
+        <strong>s-maxage=300</strong> — Shared caches (CDN/edge) consider response fresh for 300 seconds (5 minutes)
+      </td>
+    </tr>
+    <tr>
+      <td><span class="field-name">ETag</span></td>
+      <td>"v3" (the configVersion)</td>
+      <td>
+        A fingerprint of the response content. When the cache expires, the client sends <span class="field-name">If-None-Match: "v3"</span>. If config hasn't changed, the server responds with <strong>304 Not Modified</strong> (no body) — saving bandwidth.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>7.4 How ETag Validation Works (Step by Step)</h3>
+
+<div class="flow-step"><span class="step-num">1</span> First request: Browser fetches <span class="field-name">GET /config/site-nike</span></div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">2</span> Server responds with full JSON body + header <span class="field-name">ETag: "v3"</span></div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">3</span> Browser caches the response for 60 seconds</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">4</span> After 60 seconds, browser sends a new request with <span class="field-name">If-None-Match: "v3"</span></div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">5</span> Server checks: has config changed since v3?</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-step"><span class="step-num">6a</span> <strong>Unchanged:</strong> Server responds with <strong>304 Not Modified</strong> (no body, very fast)</div>
+<div class="flow-step"><span class="step-num">6b</span> <strong>Changed:</strong> Server responds with new body + new <span class="field-name">ETag: "v4"</span></div>
+
+<div class="callout callout-green">
+  <strong>Result:</strong>
+  Faster responses. Less bandwidth. Less server load. The CDN serves most requests without ever hitting the origin.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 8. DATA FLOW EXAMPLES                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 class="page-break"><span class="section-num">8.</span> Data Flow — End-to-End Examples</h2>
+
+<h3>8.1 Example: Egyptian Mobile User (marketing = true)</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Step</th><th>What Happens</th><th>Data</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1. Frontend sends</strong></td>
+      <td>POST /decide</td>
+      <td>siteId: "site-nike", country: "EG", deviceType: "mobile", marketing: true</td>
+    </tr>
+    <tr>
+      <td><strong>2. Consent check</strong></td>
+      <td>marketing=true → full context</td>
+      <td>All fields passed to rule engine (including visitorId, traits)</td>
+    </tr>
+    <tr>
+      <td><strong>3. Rule evaluation</strong></td>
+      <td>Rule 1 checks: country="EG" AND deviceType="mobile"</td>
+      <td>Both conditions match → ✓ MATCH</td>
+    </tr>
+    <tr>
+      <td><strong>4. Response</strong></td>
+      <td>Return mobile-sale variant</td>
+      <td>variantId: "mobile-sale", headline: "Mobile users get 20% off"</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>8.2 Example: Google Visitor from UK (marketing = false)</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Step</th><th>What Happens</th><th>Data</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1. Frontend sends</strong></td>
+      <td>POST /decide</td>
+      <td>siteId: "site-nike", country: "GB", referrerDomain: "google.com", visitorId: "vip-123", marketing: false</td>
+    </tr>
+    <tr>
+      <td><strong>2. Consent check</strong></td>
+      <td>marketing=false → strip unsafe fields</td>
+      <td>visitorId DROPPED. Only: country="GB", language, deviceType, referrerDomain="google.com"</td>
+    </tr>
+    <tr>
+      <td><strong>3. Rule evaluation</strong></td>
+      <td>Rule 1: country="EG"? No (GB ≠ EG) → skip<br>Rule 2: referrerDomain="google.com"? Yes → ✓ MATCH</td>
+      <td>First match wins at Rule 2</td>
+    </tr>
+    <tr>
+      <td><strong>4. Response</strong></td>
+      <td>Return seo-variant</td>
+      <td>variantId: "seo-variant", headline: "Welcome Google visitors"</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>Key point:</strong> Even though this visitor had a <span class="field-name">visitorId: "vip-123"</span>, it was dropped by the consent filter. The decision was made purely on the anonymous referrer domain signal.</p>
+
+<h3>8.3 Example: No Rules Match → Fallback</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Step</th><th>What Happens</th><th>Data</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1. Frontend sends</strong></td>
+      <td>POST /decide</td>
+      <td>siteId: "site-nike", country: "US", deviceType: "desktop", referrerDomain: "linkedin.com"</td>
+    </tr>
+    <tr>
+      <td><strong>2. Rule evaluation</strong></td>
+      <td>Rule 1: country="EG"? No → skip<br>Rule 2: referrerDomain="google.com"? No → skip<br>Rule 3: language="ar"? No → skip</td>
+      <td>No rules matched</td>
+    </tr>
+    <tr>
+      <td><strong>3. Fallback</strong></td>
+      <td>Return default variant</td>
+      <td>variantId: "default", headline: "Welcome! Discover our offerings"</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 9. API CONTRACTS                                               -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 class="page-break"><span class="section-num">9.</span> API Contracts</h2>
+
+<h3>9.1 GET /config/:siteId</h3>
+
+<h4>Purpose</h4>
+<p>Retrieve the complete ruleset configuration for a given site.</p>
+
+<h4>URL Parameters</h4>
+<div class="table-wrapper">
+<table>
+  <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="field-name">siteId</span></td><td>string</td><td>Unique identifier for the site (e.g., "site-nike")</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Response Body</h4>
+<div class="table-wrapper">
+<table>
+  <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="field-name">siteId</span></td><td>string</td><td>Echo of the requested site ID</td></tr>
+    <tr><td><span class="field-name">configVersion</span></td><td>string</td><td>Version identifier (e.g., "v3") — used as ETag</td></tr>
+    <tr><td><span class="field-name">rules</span></td><td>Rule[]</td><td>Ordered list of rules (evaluated top-to-bottom)</td></tr>
+    <tr><td><span class="field-name">fallback</span></td><td>Variant</td><td>Default variant if no rules match</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Response Headers</h4>
+<div class="table-wrapper">
+<table>
+  <thead><tr><th>Header</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td><span class="field-name">ETag</span></td><td>"v3"</td></tr>
+    <tr><td><span class="field-name">Cache-Control</span></td><td>public, max-age=60, s-maxage=300</td></tr>
+    <tr><td><span class="field-name">Content-Type</span></td><td>application/json</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>9.2 POST /decide</h3>
+
+<h4>Purpose</h4>
+<p>Given a visitor and their consent, decide which variant they should see.</p>
+
+<h4>Request Body</h4>
+<div class="table-wrapper">
+<table>
+  <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="field-name">siteId</span></td><td>string</td><td>Yes</td><td>Which site's rules to evaluate</td></tr>
+    <tr><td><span class="field-name">url</span></td><td>string</td><td>Yes</td><td>The page URL the visitor is on</td></tr>
+    <tr><td><span class="field-name">visitor.visitorId</span></td><td>string</td><td>No</td><td>Unique visitor identifier (blocked when marketing=false)</td></tr>
+    <tr><td><span class="field-name">visitor.country</span></td><td>string</td><td>No</td><td>ISO 3166-1 alpha-2 country code</td></tr>
+    <tr><td><span class="field-name">visitor.language</span></td><td>string</td><td>No</td><td>ISO 639-1 language code</td></tr>
+    <tr><td><span class="field-name">visitor.deviceType</span></td><td>string</td><td>No</td><td>"desktop", "mobile", or "tablet"</td></tr>
+    <tr><td><span class="field-name">visitor.referrerDomain</span></td><td>string</td><td>No</td><td>Top-level domain of the referrer</td></tr>
+    <tr><td><span class="field-name">visitor.traits</span></td><td>object</td><td>No</td><td>Custom properties (blocked when marketing=false)</td></tr>
+    <tr><td><span class="field-name">consent.marketing</span></td><td>boolean</td><td>Yes</td><td>Whether marketing consent is granted</td></tr>
+    <tr><td><span class="field-name">consent.analytics</span></td><td>boolean</td><td>No</td><td>Whether analytics consent is granted</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Response Body</h4>
+<div class="table-wrapper">
+<table>
+  <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="field-name">variantId</span></td><td>string</td><td>The ID of the selected variant</td></tr>
+    <tr><td><span class="field-name">headline</span></td><td>string</td><td>The headline text for this variant</td></tr>
+    <tr><td><span class="field-name">flags</span></td><td>Record&lt;string, boolean&gt;</td><td>Feature flags for UI behaviour</td></tr>
+    <tr><td><span class="field-name">configVersion</span></td><td>string</td><td>Version of the config used for this decision</td></tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 10. RC + DOD                                                   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 class="page-break"><span class="section-num">10.</span> Acceptance Criteria &amp; Definition of Done</h2>
+
+<h3>10.1 Acceptance Criteria (AC)</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>#</th><th>Criterion</th><th>How We Verify It</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>AC-1</strong></td>
+      <td><span class="field-name">GET /config/:siteId</span> returns a ruleset JSON containing <span class="field-name">configVersion</span></td>
+      <td>Inspect response body</td>
+    </tr>
+    <tr>
+      <td><strong>AC-2</strong></td>
+      <td><span class="field-name">/config/:siteId</span> response includes <span class="field-name">ETag</span> and <span class="field-name">Cache-Control</span> headers</td>
+      <td>Inspect response headers</td>
+    </tr>
+    <tr>
+      <td><strong>AC-3</strong></td>
+      <td><span class="field-name">POST /decide</span> returns <span class="field-name">{ variantId, headline, flags, configVersion }</span></td>
+      <td>Inspect response body</td>
+    </tr>
+    <tr>
+      <td><strong>AC-4</strong></td>
+      <td>Rule engine evaluates 2–3 rules + a fallback default variant</td>
+      <td>Unit test proves correct rule match</td>
+    </tr>
+    <tr>
+      <td><strong>AC-5</strong></td>
+      <td>When <span class="field-name">consent.marketing=false</span>, only <span class="field-name">{ country, language, deviceType, referrerDomain }</span> may affect decisions; <span class="field-name">visitorId</span> and other traits must NOT influence the outcome</td>
+      <td>Unit test proves consent boundary</td>
+    </tr>
+    <tr>
+      <td><strong>AC-6</strong></td>
+      <td>Two automated tests: (a) rule match, (b) consent boundary</td>
+      <td><span class="field-name">npm test</span> passes both</td>
+    </tr>
+    <tr>
+      <td><strong>AC-7</strong></td>
+      <td>README with run + test steps</td>
+      <td>Present in repo root</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>10.2 Definition of Done (DoD)</h3>
+
+<p>This task is <strong>done</strong> when all of the following are true:</p>
+
+<ul>
+  <li>✔ All 7 Acceptance Criteria pass</li>
+  <li>✔ Code compiles with zero TypeScript errors</li>
+  <li>✔ All tests pass</li>
+  <li>✔ README.md documents setup, run, and test commands</li>
+  <li>✔ Inline comments explain every non-trivial block</li>
+  <li>✔ Architecture document is finalised for technical review</li>
+</ul>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 11. TECH STACK                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2><span class="section-num">11.</span> Technology Stack</h2>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Layer</th><th>Choice</th><th>Rationale</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Runtime</td><td>Node.js 20+</td><td>Long-term support, stable, widely deployed</td></tr>
+    <tr><td>Framework</td><td>NestJS 11</td><td>Enterprise-grade, modular architecture (modules/controllers/services), built on decorators and dependency injection</td></tr>
+    <tr><td>Language</td><td>TypeScript 5</td><td>Type safety, self-documenting, catches errors at compile time</td></tr>
+    <tr><td>Test Runner</td><td>Jest</td><td>NestJS default, built-in support, mature ecosystem, snapshot testing</td></tr>
+    <tr><td>Build</td><td>NestJS CLI</td><td>Scaffolding, compilation, and development server via <span class="field-name">nest start --watch</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 12. PROJECT STRUCTURE                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2><span class="section-num">12.</span> Project Structure</h2>
+
+<div class="diagram-box">
+decisioning-api/
+│
+├── src/
+│   ├── main.ts                          ← Entry point — bootstraps the NestJS application
+│   ├── app.module.ts                    ← Root module — imports all feature modules
+│   │
+│   ├── config/                          ← Config feature module
+│   │   ├── config.module.ts             ← NestJS module for config feature
+│   │   ├── config.controller.ts         ← GET /config/:siteId handler
+│   │   └── config.service.ts            ← Config store logic (in-memory rulesets)
+│   │
+│   ├── decide/                          ← Decide feature module
+│   │   ├── decide.module.ts             ← NestJS module for decide feature
+│   │   ├── decide.controller.ts         ← POST /decide handler
+│   │   └── decide.service.ts            ← Orchestrates consent filter + rule engine
+│   │
+│   ├── engine/                          ← Shared engine providers
+│   │   ├── rule-engine.service.ts       ← Rule evaluation logic (first-match wins)
+│   │   └── consent-filter.service.ts    ← Consent boundary — strips unsafe fields
+│   │
+│   └── types/
+│       └── index.ts                     ← All TypeScript interfaces and types
+│
+├── test/
+│   ├── rule-engine.spec.ts              ← Test (a): rule matching works
+│   └── consent-boundary.spec.ts         ← Test (b): marketing=false ignores visitorId
+│
+├── package.json
+├── tsconfig.json
+├── nest-cli.json
+└── README.md
+</div>
+
+<h3>Module Responsibilities</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Module</th><th>Responsibility</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>AppModule</strong></td><td>Root NestJS module — imports ConfigModule and DecideModule, wiring the application together</td></tr>
+    <tr><td><strong>ConfigModule</strong></td><td>Owns the config endpoint and in-memory config store. Controller handles HTTP, Service holds rulesets</td></tr>
+    <tr><td><strong>DecideModule</strong></td><td>Owns the decide endpoint. Controller handles HTTP, Service orchestrates consent filter + rule engine</td></tr>
+    <tr><td><strong>ConsentFilterService</strong></td><td>Injectable provider — takes visitor context + consent → returns only the fields the rule engine may see</td></tr>
+    <tr><td><strong>RuleEngineService</strong></td><td>Injectable provider — takes filtered context + rules → evaluates top-to-bottom → returns matching variant or fallback</td></tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 13. ARCHITECTURAL PRINCIPLE                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 class="page-break"><span class="section-num">13.</span> Why Separate the Decision Engine from Content Rendering</h2>
+
+<p>
+  An important architectural principle that engineers often miss: the Decision API only answers <strong>"what"</strong> to show, never <strong>"how"</strong> to show it.
+</p>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Concern</th><th>Responsibility</th><th>Where It Lives</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>WHAT</strong> variant to show</td><td>Decision API</td><td>Backend</td></tr>
+    <tr><td><strong>HOW</strong> to render it</td><td>Frontend application</td><td>Client</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Benefits of This Separation</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Benefit</th><th>Explanation</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Decoupled Deploys</strong></td>
+      <td>Rules can change without redeploying the frontend. Marketing adds a new rule? Just update config — the frontend adapts automatically.</td>
+    </tr>
+    <tr>
+      <td><strong>Marketing Agility</strong></td>
+      <td>Marketing teams update rules in configuration, no engineering tickets needed for every campaign change.</td>
+    </tr>
+    <tr>
+      <td><strong>Testability</strong></td>
+      <td>Decision logic is independently testable without rendering any UI. Pure input → output testing.</td>
+    </tr>
+    <tr>
+      <td><strong>Multi-Channel</strong></td>
+      <td>The same Decision API can serve web, mobile app, email, push notifications — any channel that needs a decision.</td>
+    </tr>
+    <tr>
+      <td><strong>Auditability</strong></td>
+      <td>All decisions flow through one service. Easy to log every decision for analysis, debugging, and compliance.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout callout-blue">
+  <strong>In one sentence:</strong>
+  This project builds a small personalisation decision API that chooses which version of content a visitor should see, based on configurable rules and consent-safe data — keeping the decision logic completely separate from the rendering logic.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- 14. TESTING STRATEGY                                           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2><span class="section-num">14.</span> Testing Strategy</h2>
+
+<h3>14.1 Automated Tests</h3>
+
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr><th>Test</th><th>What It Proves</th><th>Scenario</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Test (a): Rule Match</strong></td>
+      <td>The rule engine correctly evaluates multi-condition AND logic</td>
+      <td>A visitor with country="EG" and deviceType="mobile" is matched to the <span class="field-name">mobile-sale</span> variant</td>
+    </tr>
+    <tr>
+      <td><strong>Test (b): Consent Boundary</strong></td>
+      <td>When marketing=false, visitorId and traits do not influence the decision</td>
+      <td>Two visitors with different visitorIds but identical safe fields → both receive the exact same variant</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>14.2 Manual Verification Points</h3>
+
+<ol>
+  <li>Start the server and call <span class="field-name">GET /config/site-nike</span> — verify rules, versions, and cache headers</li>
+  <li>Call <span class="field-name">POST /decide</span> with an Egyptian mobile user — verify <span class="field-name">mobile-sale</span> variant is returned</li>
+  <li>Call <span class="field-name">POST /decide</span> with marketing=false and two different visitorIds — verify both get the same result</li>
+  <li>Call <span class="field-name">POST /decide</span> with a non-matching visitor — verify the fallback variant is returned</li>
+</ol>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- FOOTER                                                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="footer">
+  <p>Decisioning API — Technical Architecture Document v1.0</p>
+  <p>Prepared for technical discovery and review • March 2026</p>
+</div>
+
+</div><!-- /content -->
+
+<!-- Print button -->
+<button class="print-btn no-print" onclick="window.print()">
+  📄 Save as PDF
+</button>
+
+</body>
+</html>
