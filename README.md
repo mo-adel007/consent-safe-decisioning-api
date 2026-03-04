@@ -1,126 +1,69 @@
-# 🚦 Consent-Safe Decisioning API
+# Decisioning API
 
-A lightweight **rule-based personalization engine** built with **NestJS + TypeScript** that determines which content variant a visitor should see based on contextual signals while respecting **user consent boundaries**.
+A consent-safe personalisation decision API built with **NestJS** and **TypeScript**.
 
-This project demonstrates the architecture used by modern **A/B testing, feature flag, and personalization platforms**.
-
----
-
-# ✨ Key Idea
-
-Instead of hardcoding personalization logic in the frontend, the frontend asks a backend decision service:
-
-> “Given this visitor and their context, which version of the content should they see?”
-
-The service evaluates configured rules and returns the correct **variant**.
+Given a visitor, a URL, and consent signals, this API returns which variant of content the visitor should see. Rules come from a configurable ruleset and are cacheable at CDN/edge/origin levels.
 
 ---
 
-# 🧠 Core Concepts
+## Quick Start
 
-### Variant
+### Prerequisites
 
-A **variant** is a version of content shown to a visitor.
+- **Node.js 20+** (LTS recommended)
+- **npm** (comes with Node.js)
 
-Example:
+### Setup
 
-| Variant ID   | Headline                        |
-| ------------ | ------------------------------- |
-| mobile-sale  | Mobile users get 20% off        |
-| seo-variant  | Welcome Google visitors         |
-| arabic-offer | مرحباً! اكتشف عروضنا            |
-| default      | Welcome! Discover our offerings |
+```bash
+# 1. Install dependencies
+npm install
 
----
+# 2. Start the development server (with hot-reload)
+npm run start:dev
 
-### Rule Engine
-
-Rules are evaluated **top-to-bottom**.
-
-Example rule:
-
-```
-IF country = EG
-AND deviceType = mobile
-→ mobile-sale
+# 3. The API is now running at http://localhost:3000
 ```
 
-The **first rule that matches wins**.
+### Run Tests
 
-If no rules match → **fallback variant** is returned.
+```bash
+# Run all tests
+npm test
 
----
+# Run tests in watch mode (re-runs on file changes)
+npm run test:watch
 
-# 🔒 Consent Boundary
-
-To comply with privacy regulations (GDPR-style rules), the system enforces a strict **consent boundary**.
-
-When:
-
-```
-consent.marketing = false
-```
-
-The decision engine must **ignore personal identifiers**.
-
-### ❌ Blocked signals
-
-```
-visitorId
-userId
-email
-traits
-```
-
-### ✅ Allowed signals
-
-```
-country
-language
-deviceType
-referrerDomain
-```
-
-This ensures personalization remains **privacy-safe**.
-
----
-
-# 🏗 Architecture
-
-```
-User visits website
-        ↓
-Frontend gathers visitor context
-        ↓
-POST /decide
-        ↓
-Consent filter removes restricted fields
-        ↓
-Rule engine evaluates rules
-        ↓
-Variant returned
-        ↓
-Frontend renders content
+# Run tests with coverage report
+npm run test:cov
 ```
 
 ---
 
-# 📡 API Endpoints
+## API Endpoints
 
-## 1️⃣ Get Configuration
+### 1. Base URL (Local Development)
 
-### GET `/config/:siteId`
+If you run NestJS locally:
+`http://localhost:3000`
 
-Returns the ruleset configuration for a site.
+Your endpoints will be:
+- `GET  http://localhost:3000/config/:siteId`
+- `POST http://localhost:3000/decide`
 
-### Example Request
+*(No authentication is required for these endpoints based on the architecture.)*
 
-```
-GET http://localhost:3000/config/site-nike
-```
+---
 
-### Example Response
+### 2. Endpoint 1 — Get Config
 
+#### Request
+`GET http://localhost:3000/config/site-nike`
+
+**Headers (optional)**
+- `Accept: application/json`
+
+#### Expected Response
 ```json
 {
   "siteId": "site-nike",
@@ -128,46 +71,63 @@ GET http://localhost:3000/config/site-nike
   "rules": [
     {
       "id": "rule-eg-mobile",
-      "conditions": {
-        "country": "EG",
-        "deviceType": "mobile"
-      },
-      "variantId": "mobile-sale"
+      "conditions": [
+        { "field": "country", "operator": "eq", "value": "EG" },
+        { "field": "deviceType", "operator": "eq", "value": "mobile" }
+      ],
+      "variantId": "mobile-sale",
+      "headline": "Mobile users get 20% off",
+      "flags": { "showDiscountBanner": true, "enableChat": false }
     },
     {
       "id": "rule-google-seo",
-      "conditions": {
-        "referrerDomain": "google.com"
-      },
-      "variantId": "seo-variant"
+      "conditions": [
+        { "field": "referrerDomain", "operator": "eq", "value": "google.com" }
+      ],
+      "variantId": "seo-variant",
+      "headline": "Welcome Google visitors",
+      "flags": { "showDiscountBanner": false, "enableChat": true }
+    },
+    {
+      "id": "rule-arabic",
+      "conditions": [
+        { "field": "language", "operator": "eq", "value": "ar" }
+      ],
+      "variantId": "arabic-offer",
+      "headline": "مرحباً! اكتشف عروضنا",
+      "flags": { "showDiscountBanner": false, "enableChat": true }
     }
   ],
   "fallback": {
     "variantId": "default",
-    "headline": "Welcome! Discover our offerings"
+    "headline": "Welcome! Discover our offerings",
+    "flags": { "showDiscountBanner": false, "enableChat": true }
   }
 }
 ```
 
-### Response Headers
-
-```
-ETag: "v3"
-Cache-Control: public, max-age=60, s-maxage=300
-```
-
-These headers allow **browser and CDN caching**.
+#### Verify Headers
+In Postman → Headers tab, you must see the following response headers (required by the assignment):
+- `ETag: "v3"`
+- `Cache-Control: public, max-age=60, s-maxage=300`
+- `Content-Type: application/json; charset=utf-8`
 
 ---
 
-## 2️⃣ Decide Variant
+### 3. Endpoint 2 — Decide Variant
 
-### POST `/decide`
+#### Request
+`POST http://localhost:3000/decide`
 
-Determines which variant a visitor should see.
+**Headers**
+- `Content-Type: application/json`
+- `Accept: application/json`
 
-### Example Request
+---
 
+### 4. Test Case 1 — Egyptian Mobile User (Rule Match)
+
+**Body**
 ```json
 {
   "siteId": "site-nike",
@@ -185,97 +145,35 @@ Determines which variant a visitor should see.
 }
 ```
 
-### Example Response
-
+**Expected Response**
 ```json
 {
   "variantId": "mobile-sale",
   "headline": "Mobile users get 20% off",
   "flags": {
-    "showDiscountBanner": true
+    "showDiscountBanner": true,
+    "enableChat": false
   },
   "configVersion": "v3"
 }
 ```
+*Reason: `country = EG` and `deviceType = mobile`. Matches rule: `rule-eg-mobile`.*
 
 ---
 
-# 🧪 Testing
+### 5. Test Case 2 — Google Visitor
 
-Two automated tests verify core behavior.
-
----
-
-### Test 1 — Rule Matching
-
-Ensures rules produce the expected variant.
-
-Example:
-
-```
-country = EG
-deviceType = mobile
-```
-
-Expected result:
-
-```
-mobile-sale
-```
-
----
-
-### Test 2 — Consent Boundary
-
-Ensures personal identifiers are ignored when marketing consent is disabled.
-
-Example:
-
-```
-visitorId = vip123
-marketing = false
-```
-
-Expected result:
-
-```
-fallback variant
-```
-
----
-
-# 🧪 Manual Testing (Postman)
-
-### Fetch rules
-
-```
-GET /config/site-nike
-```
-
-Verify:
-
-* rules returned
-* configVersion
-* ETag header
-* Cache-Control header
-
----
-
-### Egyptian Mobile User
-
-```
-POST /decide
-```
-
-Body:
-
+**Body**
 ```json
 {
   "siteId": "site-nike",
   "url": "/home",
   "visitor": {
-    "country": "EG",
-    "deviceType": "mobile"
+    "visitorId": "visitor-555",
+    "country": "GB",
+    "language": "en",
+    "deviceType": "desktop",
+    "referrerDomain": "google.com"
   },
   "consent": {
     "marketing": true
@@ -283,23 +181,36 @@ Body:
 }
 ```
 
-Expected:
-
+**Expected Response**
+```json
+{
+  "variantId": "seo-variant",
+  "headline": "Welcome Google visitors",
+  "flags": {
+    "showDiscountBanner": false,
+    "enableChat": true
+  },
+  "configVersion": "v3"
+}
 ```
-mobile-sale variant
-```
+*Reason: `referrerDomain = google.com`. Matches rule: `rule-google-seo`.*
 
 ---
 
-### Consent Boundary Test
+### 6. Test Case 3 — Consent Boundary (Important)
+*This is one of the required tests in the assignment.*
 
+**Body**
 ```json
 {
   "siteId": "site-nike",
   "url": "/home",
   "visitor": {
     "visitorId": "vip-123",
-    "country": "US"
+    "country": "US",
+    "language": "en",
+    "deviceType": "desktop",
+    "referrerDomain": "linkedin.com"
   },
   "consent": {
     "marketing": false
@@ -307,116 +218,123 @@ mobile-sale variant
 }
 ```
 
-Expected:
-
+**Expected Result**
+```json
+{
+  "variantId": "default",
+  "headline": "Welcome! Discover our offerings",
+  "flags": {
+    "showDiscountBanner": false,
+    "enableChat": true
+  },
+  "configVersion": "v3"
+}
 ```
-fallback variant
-```
-
-Because **visitorId must be ignored**.
+*Reason: `visitorId` exists, BUT `marketing = false`. `visitorId` MUST be ignored. So no rules match → fallback. This verifies the privacy boundary.*
 
 ---
 
-# 🗂 Project Structure
+### 7. Test Case 4 — Fallback Rule
 
+**Body**
+```json
+{
+  "siteId": "site-nike",
+  "url": "/about",
+  "visitor": {
+    "country": "US",
+    "language": "en",
+    "deviceType": "desktop",
+    "referrerDomain": "linkedin.com"
+  },
+  "consent": {
+    "marketing": true
+  }
+}
 ```
-decisioning-api
+
+**Expected Response**
+```json
+{
+  "variantId": "default",
+  "headline": "Welcome! Discover our offerings",
+  "flags": {
+    "showDiscountBanner": false,
+    "enableChat": true
+  },
+  "configVersion": "v3"
+}
+```
+*Reason: No rule matches → fallback.*
+
+---
+
+## Postman Collection Structure
+
+Recommended Postman folder structure:
+
+```text
+Decisioning API/
+├── GET Config
+│   └── GET /config/site-nike
 │
-├── src
-│   ├── config
-│   │   ├── config.controller.ts
-│   │   └── config.service.ts
-│   │
-│   ├── decide
-│   │   ├── decide.controller.ts
-│   │   └── decide.service.ts
-│   │
-│   ├── engine
-│   │   ├── rule-engine.service.ts
-│   │   └── consent-filter.service.ts
-│   │
-│   └── types
-│       └── index.ts
+├── Decide – Egyptian Mobile
+│   └── POST /decide
 │
-├── test
-│   ├── rule-engine.spec.ts
-│   └── consent-boundary.spec.ts
+├── Decide – Google Visitor
+│   └── POST /decide
 │
-├── package.json
-└── README.md
+├── Decide – Consent Boundary
+│   └── POST /decide
+│
+└── Decide – Fallback
+    └── POST /decide
 ```
 
 ---
 
-# ⚙️ Running the Project
+## What Reviewers Expect You to Show
 
-### Install dependencies
+When you demo this API:
+1. **Call `/config/site-nike`** → Show rules, configVersion, ETag, and Cache-Control headers.
+2. **Call `/decide` with EG mobile user** → Show `mobile-sale` variant.
+3. **Call `/decide` with google referrer** → Show `seo-variant`.
+4. **Call `/decide` with marketing=false** → Show that visitorId is ignored and the fallback is correctly served.
+
+---
+
+## Project Structure
 
 ```
-npm install
+src/
+├── main.ts                          # Entry point
+├── app.module.ts                    # Root module
+├── config/
+│   ├── config.module.ts             # Config feature module
+│   ├── config.controller.ts         # GET /config/:siteId
+│   └── config.service.ts            # In-memory ruleset store
+├── decide/
+│   ├── decide.module.ts             # Decide feature module
+│   ├── decide.controller.ts         # POST /decide
+│   └── decide.service.ts            # Decision orchestration
+├── engine/
+│   ├── rule-engine.service.ts       # Rule evaluation (first-match-wins)
+│   └── consent-filter.service.ts    # Consent boundary enforcement
+└── types/
+    └── index.ts                     # TypeScript interfaces
 ```
 
 ---
 
-### Start development server
+## Tests
 
-```
-npm run start:dev
-```
-
-Server runs at:
-
-```
-http://localhost:3000
-```
+| Test | File | What It Proves |
+|------|------|---------------|
+| Rule Match | `test/rule-engine.spec.ts` | Multi-condition AND logic works, first-match-wins |
+| Consent Boundary | `test/consent-boundary.spec.ts` | marketing=false ignores visitorId and traits |
 
 ---
 
-# ▶ Run Tests
+## Architecture
 
-```
-npm test
-```
-
----
-
-# 🧩 Technology Stack
-
-| Layer        | Technology                 |
-| ------------ | -------------------------- |
-| Runtime      | Node.js                    |
-| Framework    | NestJS                     |
-| Language     | TypeScript                 |
-| Testing      | Jest                       |
-| Architecture | Rule-based decision engine |
-
----
-
-# 🎯 Acceptance Criteria Covered
-
-✔ `/config/:siteId` returns rules and `configVersion`
-✔ Response includes **ETag + Cache-Control**
-✔ `/decide` returns `{ variantId, headline, flags, configVersion }`
-✔ Rule engine evaluates rules + fallback
-✔ Consent boundary enforced
-✔ Two automated tests provided
-✔ README documentation included
-
----
-
-# 📌 Summary
-
-This project implements a minimal **personalization decision engine** used in modern platforms such as:
-
-* A/B testing systems
-* feature flag platforms
-* marketing personalization engines
-
-The design separates:
-
-| Concern           | Location |
-| ----------------- | -------- |
-| Decision logic    | Backend  |
-| Content rendering | Frontend |
-
-This separation enables **safe experimentation, flexible personalization, and privacy-compliant targeting** without redeploying frontend code.
+See `Decisioning_API_Architecture_Document.html` for the full technical architecture document including system flows, consent boundary design, caching strategy, and API contracts.
