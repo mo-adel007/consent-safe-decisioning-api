@@ -106,11 +106,6 @@ Your endpoints will be:
 }
 ```
 
-#### Verify Headers
-In Postman → Headers tab, you must see the following response headers (required by the assignment):
-- `ETag: "v3"`
-- `Cache-Control: public, max-age=60, s-maxage=300`
-- `Content-Type: application/json; charset=utf-8`
 
 ---
 
@@ -338,3 +333,4 @@ src/
 ## Architecture
 
 See `Decisioning_API_Architecture_Document.html` for the full technical architecture document including system flows, consent boundary design, caching strategy, and API contracts.
+
